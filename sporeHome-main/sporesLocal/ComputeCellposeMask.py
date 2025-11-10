@@ -1,0 +1,17 @@
+from pathlib import Path
+from skimage import io as skio
+from cellpose import core, models
+
+def write_mask(image_t0_path, output_mask_dir, mask_name = "cellpose_mask_t=000.tiff"):
+  print(image_t0_path)
+  # init model (GPU if available, else CPU)
+  print(f"initializing cellpose model...")
+  model = models.CellposeModel(gpu=core.use_gpu())
+  # load image
+  img = skio.imread(image_t0_path)
+  # run cellpose
+  masks, _, _ = model.eval([img], channels=[0, 0])
+  # save mask
+  skio.imsave(output_mask_dir + mask_name, masks[0])
+  print(f"writing mask to {output_mask_dir + mask_name}...")
+  return output_mask_dir + mask_name

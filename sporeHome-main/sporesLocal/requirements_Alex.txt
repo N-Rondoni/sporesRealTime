@@ -1,0 +1,5 @@
+aicspylibczi
+scikit-image
+tifffile #python -m pip install -U tifffile[all]
+cellpose
+pandas

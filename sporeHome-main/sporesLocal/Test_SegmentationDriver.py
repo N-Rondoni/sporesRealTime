@@ -1,0 +1,47 @@
+# author: Alexandra Nava
+# date: 2025-09-24
+# description: Short description of the file
+
+#IMPORTS 
+from aicspylibczi import CziFile
+from tifffile import imwrite
+from SelectFocusedImage import focused_image_selection, best_brenner_score
+from ComputeCellposeMask import write_mask
+from ApplyCellposeMask import apply_cellpose_mask
+from Preprocessing import preprocess_image
+from WriteGerminationStatus import write_germination_status
+from CalculatePercentageGerminated import calculate_percentage_germinated
+import Pandas as pd
+import numpy as np
+
+output_dir = '/Users/alexandra/Desktop/Spores/Device_Scripts/Test_Output/'
+
+### FOR T IN TIMEPOINTS:
+czi_path = '/Users/alexandra/Library/CloudStorage/Dropbox/ARO-Files/Device-Segmentation/8-20-2025/Test.czi'
+spore_data_output_path = "output_dir_{}_spore_data.csv"
+
+
+focused_image_path: str = focused_image_selection(czi_path, output_dir) # pass back path of focused image for this timepoint
+preprocessed_image_path: str = preprocess_image(focused_image_path)
+
+preprocessed_image_path = output_dir + 'focused_t=000_z=028.tiff' # TESTING REMOVE LATER
+
+timepoint = preprocessed_image_path.split('t=')[1].split('_')[0] # determine timepoints from image path
+imaging = "PhC" # determine imaging from image path 
+
+# produce mask at first timepoint, than apply to all timepoints
+if int(timepoint) == 0:  
+  mask_path = write_mask(preprocessed_image_path, output_dir)
+data_time_t = apply_cellpose_mask(preprocessed_image_path, mask_path) 
+
+# write spore data to csv
+if int(timepoint) == 0:
+  data_time_t.to_csv(spore_data_output_path.format(imaging), index=False)
+else:
+  data_time_t.to_csv(spore_data_output_path.format(imaging), mode='a', header=False, index=False)
+
+data_all_time = pd.read_csv(spore_data_output_path.format(imaging))
+data_all_time_with_germ_status = write_germination_status(data_all_time, timepoint) # goes through each spore and add germination status column value to current timepoint
+
+# calculate percentage germinated
+currently_germinated_percentage = calculate_percentage_germinated(data_all_time_with_germ_status["timepoint"] == int(timepoint))

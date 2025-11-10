@@ -1,0 +1,63 @@
+# author: Alexandra Nava
+# date: 2025-09-23
+# description: Takes in a czi file path and outputs the most focused image at each timepoint using the Brenner score method.
+
+from aicspylibczi import CziFile
+import numpy as np
+import matplotlib.pyplot as plt
+import tifffile
+
+def best_brenner_score(image_arrays: list) -> np.array:
+  """
+  Calculate the Brenner score for a list of image arrays and return the best image of the stack.
+  
+  :image_arrays: list of 2D numpy arrays representing images at different focal planes
+  :return: tuple of (best_image, best_brenner_score_index)
+  
+  """
+  brenner_scores = []
+  for image_array in image_arrays:
+    image_array = np.squeeze(image_array)
+    brenner_score = np.sum(np.diff(image_array, axis=0, n=2)**2) + \
+            np.sum(np.diff(image_array, axis=1, n=2)**2)
+    brenner_scores.append(brenner_score)
+  best_brenner_score_index = np.argmax(brenner_scores)
+  best_image = image_arrays[best_brenner_score_index]
+  return np.squeeze(best_image), best_brenner_score_index
+
+def focused_image_selection(image_stack_path: str, output_directory: str, output_naming = 'focused_t={timepoint:03d}_z={zindex:03d}.tiff') -> None:
+  '''
+  takes in a czi path and writes the most focused image at each timepoint
+  
+  :image_stack_path: path to the czi file
+  :output_directory: directory to save the focused images
+  :output_naming: naming convention for the output files
+
+  '''
+
+  zstack = CziFile(image_stack_path)
+  print(zstack.size)
+  #timepoints, channels, zs, height, width = zstack.size # tosses an error, missing one value somehow?
+  if len(zstack.size) == 4:
+    channels, zs, height, width = zstack.size
+    timepoints = 1
+  else:
+    timepoints, channels, zs, height, width = zstack.size 
+  #(3, 1, 43, 2048, 2048)
+  print(f"selecting focused frames from {image_stack_path}...")
+
+  for t in range(timepoints):
+      zstack_arrays_time_t: list = [zstack.read_image(C=0, Z=z, T=t)[0] for z in range(zs)]
+      best_focus_image_time_t, z_position = best_brenner_score(zstack_arrays_time_t)
+      tifffile.imwrite(output_directory + output_naming.format(timepoint=t, zindex = z_position), best_focus_image_time_t.astype(np.uint16))
+ 
+  print(f"writing focused images to {output_directory}...")
+  if timepoints == 1:
+    print(str(output_directory + output_naming.format(timepoint=t, zindex = z_position))) 
+    return str(output_directory + output_naming.format(timepoint=t, zindex = z_position)) 
+
+
+if __name__ == "__main__":
+  CZI_STACK_PATH: str = "/Users/alexandra/Library/CloudStorage/Dropbox/ARO-Files/Device-Segmentation/8-20-2025/Test.czi"
+  SAVE_DIR: str = "/Users/alexandra/Library/CloudStorage/Dropbox/ARO-Files/Device-Segmentation/8-20-2025/"
+  focused_image_selection(CZI_STACK_PATH, SAVE_DIR)

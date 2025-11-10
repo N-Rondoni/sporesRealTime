@@ -1,0 +1,10 @@
+*.czi
+*.tiff
+*.gif
+*.png
+*.csv
+*.tif
+*.pyd
+.winvenv/
+venv/
+.env/
