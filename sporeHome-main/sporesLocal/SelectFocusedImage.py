@@ -43,6 +43,7 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
     timepoints = 1
   else:
     timepoints, channels, zs, height, width = zstack.size 
+
   #(3, 1, 43, 2048, 2048)
   print(f"selecting focused frames from {image_stack_path}...")
 
@@ -55,6 +56,8 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
   if timepoints == 1:
     print(str(output_directory + output_naming.format(timepoint=t, zindex = z_position))) 
     return str(output_directory + output_naming.format(timepoint=t, zindex = z_position)) 
+  elif timepoints > 1: # if we have more than one timepoint, want to return the z poisition that is focused 
+    return z_position 
 
 
 if __name__ == "__main__":

@@ -78,10 +78,13 @@ while i <= frameFinal:
     print(czi_path)
 
 
-    focused_image_path: str = focused_image_selection(czi_path, output_dir) # pass back path of focused image for this timepoint
-    #preprocessed_image_path: str = preprocess_image(focused_image_path)
-
-    print("focused image path:", focused_image_path)
+    focused_image_path: str = str(focused_image_selection(czi_path, output_dir)) # pass back path of focused image for this timepoint
+    if ".tif" not in str(focused_image_path):
+      #focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(focused_image_path).zfill(3)}.tiff' # may work for future naming convention
+      focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(int(focused_image_path) + i).zfill(3)}.tiff'
+      print("focused image path:", focused_image_path)
+    
+    #preprocessed_image_path: str = preprocess_image(focused_image_path) # will need this eventually!
     preprocessed_image_path = focused_image_path #output_dir + 'focused_t=000_z=028.tiff')
 
     #timepoint = preprocessed_image_path.split('t=')[1].split('_')[0] # determine timepoints from image path
@@ -93,7 +96,9 @@ while i <= frameFinal:
 # produce mask at first timepoint, than apply to all timepoints
     if int(timepoint) == 1: 
       print("new print:", preprocessed_image_path, output_dir)
-      mask_path = write_mask(preprocessed_image_path, output_dir)
+      # can be slow, uncomment write_mask for real use!
+      #mask_path = write_mask(preprocessed_image_path, output_dir)
+      mask_path = f"{output_dir}cellpose_mask_t=000.tiff" # this is for testing without writing a new mask
     print("made it through write_mask")
     data_time_t = apply_cellpose_mask(preprocessed_image_path, mask_path) 
     
@@ -104,13 +109,15 @@ while i <= frameFinal:
     else:
       data_time_t.to_csv(spore_data_output_path.format(imaging), mode='a', header=False, index=False)
 
+    print("reading in csv data")
     data_all_time = pd.read_csv(spore_data_output_path.format(imaging))
     data_all_time_fpath = str(spore_data_output_path.format(imaging))
 
     data_all_time_with_germ_status = write_germination_status(data_all_time_fpath, timepoint) # goes through each spore and add germination status column value to current timepoint
 
 # calculate percentage germinated
-    currently_germinated_percentage = calculate_percentage_germinated(data_all_time_with_germ_status["timepoint"] == int(timepoint))
+    #currently_germinated_percentage = calculate_percentage_germinated(data_all_time_with_germ_status["timepoint"] == int(timepoint))
+    currently_germinated_percentage = calculate_percentage_germinated(data_all_time_with_germ_status)
 
 
 
@@ -122,9 +129,13 @@ while i <= frameFinal:
     frame = frame_v_rate[i, 0] # good gut check to compare this to i. Maybe shouldn't be used? 
     rate = frame_v_rate[i, 1]
 
+    rate = currently_germinated_percentage
+
+
     ## compute control action as a function of this, e.g., suppose germ% is 0.5 currently. Compare to desired traj.
     # Eventually compute PID error between desired trajectory, and actual current rate
     setPoint = desiredTraj(i)
+    print(setPoint, rate)
     ep = (setPoint - rate)
     ## supply voltage to potentiostat as a function of this error. Hold for 5 minutes? 4.9 minutes? What is safe.
     #                                                              consider: will not poll for new files until done. 
@@ -134,6 +145,7 @@ while i <= frameFinal:
     # connect to device, set voltage for duration seconds
     print("voltageSetter executes here, when connected to windows machine and potentiostat uncomment. ")
     #voltageSetter(voltOut, duration) #uncomment on windows machine
+    # rewrite voltage setter to hold for duration seconds, then go to zero until next update comes.
 
     # have OS code execute new file, with appropriate sleep time
     #               potentially have a seperate driver checking for new methodscripts? potentiostat execution seperate?

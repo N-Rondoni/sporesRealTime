@@ -53,6 +53,7 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
  
   print(f"writing focused images to {output_directory}...")
   if timepoints == 1:
+    print(str(output_directory + output_naming.format(timepoint=t, zindex = z_position))) 
     return str(output_directory + output_naming.format(timepoint=t, zindex = z_position)) 
 
 

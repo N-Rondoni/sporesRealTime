@@ -23,5 +23,4 @@ def calculate_percentage_germinated(data: pd.DataFrame) -> float:
         print(percentage_germinated_t)
         #percentage_germinated_array[int(timepoint)] = percentage_germinated_t
 
-    #return percentage_germinated_array
-    return percentage_germinated_t
+    return percentage_germinated_array

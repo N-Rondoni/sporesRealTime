@@ -57,7 +57,6 @@ def write_germination_status(property_data_csv, t, plot_and_save_phase_trace = F
   if time_column not in population_data.columns:
     print("made it to check 3:55 pm 11/10")
     population_data[time_column] = t
-    print(population_data.columns)
   else:
     population_data[time_column] = population_data[time_column].fillna(t)
     print("made it to else, 3:55pm 11/10")
