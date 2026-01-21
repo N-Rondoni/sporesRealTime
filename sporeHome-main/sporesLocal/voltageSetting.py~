@@ -1,4 +1,5 @@
 from pspython import pspyinstruments, pspymethods
+import time
 ''''
 Helper function which when called:
     - connects to the potentiostat
@@ -24,15 +25,17 @@ def voltageSetter(volt, duration):
 
     #manager.set_potential(1) sets to 1V
     manager.set_potential(volt)
-    print('set potential to ' + volt + 'V')
+    print('set potential to ' + str(volt) + 'V')
 
     manager.set_current_range(pspymethods.get_current_range(7))
-    print('set cell to to 1mA currrent range')
+    #print('set cell to to 1mA currrent range')
 
     current = manager.read_current()
     print('current = ' + str(current) + ' µA')
 
     print('Holding for', duration, 'seconds')
+    
+    time.sleep(duration)
 
     manager.set_cell(False)
     print('cell disabled')
@@ -43,3 +46,66 @@ def voltageSetter(volt, duration):
         print('disconnected')
     else:
         print('error while disconnecting')
+
+
+
+def voltageSetterNoDuration(volt, is_first_timepoint):
+    global manager
+    if is_first_timepoint:
+        manager = pspyinstruments.InstrumentManager()
+
+        available_instruments = pspyinstruments.discover_instruments()
+        print('connecting to ' + available_instruments[0].name)
+        success = manager.connect(available_instruments[0])
+
+        if success != 1:
+            print('connection failed')
+            exit()
+
+        print('connection established')
+
+        manager.set_cell(True)
+        print('cell enabled')
+    else: 
+        print("connection still established, cell still enabled.")
+
+    #EXAMPLE: manager.set_potential(1) sets to 1V
+    manager.set_potential(volt)
+    print('set potential to ' + str(volt) + 'V')
+
+    manager.set_current_range(pspymethods.get_current_range(7))
+    #print('set cell to to 1mA currrent range')
+
+    current = manager.read_current()
+    print('current = ' + str(current) + ' µA')
+
+    print('Holding until next control action')
+    
+    #time.sleep(260) # in seconds, should be longer than update duration.
+                    # should get a new command more frequently than the sleep time. 
+    
+
+
+
+def disconnect():
+    global manager
+    manager.set_cell(False)
+    print('cell disabled')
+
+    success = manager.disconnect()
+
+    if success == 1:
+        print('disconnected')
+    else:
+        print('error while disconnecting, push the power button on the potentiostat!')
+
+if __name__ == "__main__":
+    ## commented testing to find limits of dummy cell
+    #voltageSetterNoDuration(-0.5, True)
+    #time.sleep(10)
+    #voltageSetterNoDuration(-1.0, False)
+    #time.sleep(10)
+    #voltageSetterNoDuration(-1.5, False)
+    ## end dummy cell testing. 
+    disconnect()
+

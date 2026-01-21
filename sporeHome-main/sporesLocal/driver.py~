@@ -145,6 +145,7 @@ while i <= frameFinal:
     # connect to device, set voltage for duration seconds
     print("voltageSetter executes here, when connected to windows machine and potentiostat uncomment. ")
     #voltageSetter(voltOut, duration) #uncomment on windows machine
+    # rewrite voltage setter to hold for duration seconds, then go to zero until next update comes.
 
     # have OS code execute new file, with appropriate sleep time
     #               potentially have a seperate driver checking for new methodscripts? potentiostat execution seperate?

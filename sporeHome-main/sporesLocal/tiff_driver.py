@@ -9,6 +9,7 @@ import numpy as np
 from fileChecker import hasNewFiles
 from desiredTrajectory import desiredTraj
 from voltageSetting import voltageSetter
+from voltageSetting import voltageSetterNoDuration, disconnect
 # begin Alex's imports
 from aicspylibczi import CziFile
 from tifffile import imwrite
@@ -17,10 +18,10 @@ from ComputeCellposeMask import write_mask
 from ApplyCellposeMask import apply_cellpose_mask
 from Preprocessing import preprocess_image
 from WriteGerminationStatus import write_germination_status
-from CalculatePercentageGerminated import calculate_percentage_germinated
+from tiff_CalculatePercentageGerminated import calculate_percentage_germinated
 import pandas as pd
-# NOTE TO SELF: this is good for .czi file types, with blurry selection, but we haven't been able to test germ% because we don't have 
-#               appropriate files to test on. Moving to tiff_driver.py as of 1/20/26. Will likely use this driver eventually, however. 
+#NOTE to self:  this .tiff driver is used to test if germination % is functional on .tiff files. In the event we are not supplied .czi files
+#               use this file instead. Preprocessing is commented out, as is blurry selector in this case. Those have been tested on .czi at least. 
 
 
 
@@ -31,9 +32,8 @@ folder = r"C:\palmsens\proj\rawData"
 # how many seconds to check for new files
 pollTime = 5
 # final frame number. Multiples of 5 minutes. May want to iterate indefinitely.
-frameFinal = 6
-# how long voltage, decided by controller, will be supplied for. Should be less than duration of a frame. 
-
+frameFinal = 300
+# how long voltage, decided by controller, will be supplied for. Should be less than duration of a frame in seconds.  
 duration = 270 
 duration = 10 # just for testing
 
@@ -46,6 +46,8 @@ startTimeUnix = time.time()
 pacific = pytz.timezone("US/Pacific")
 startTime = datetime.fromtimestamp(startTimeUnix, pacific)
 vMin, vMax = -2.5, 2.5
+#vMin, vMax = -5.0, 5.0
+
 ###
 
 print("##################################################################")
@@ -53,6 +55,7 @@ print("Beginning driver for real time control of spore germination rates!")
 print("------------------------------------------------------------------")
 print("Starting time:", startTime.strftime("%Y-%m-%d %H:%M:%S %Z"))
 print("------------------------------------------------------------------")
+is_first_frame = True # <- merge to driver
 while i <= frameFinal:
     print("Polling for new images every", pollTime, "seconds")
     print("current frame number:", i)
@@ -68,7 +71,8 @@ while i <= frameFinal:
     # once found becomes True, there is a new image (or at least file), thus we are on the next frame, and should iterate i. Done in "if found" check.
     # select least blurry file, newfpaths is a list of strings, which are fnames. Pass these into blurry decider. 
     #output_dir =  r"C:\palmsens\proj\genData\\"
-    output_dir =  r"C:/palmsens/proj/genData/"
+    output_dir =  r"C:/palmsens/proj/tiff_genData/"
+    #output_dir =  r"C:\palmsens\proj\tiff_genData\\"
 
     #print(output_dir)
 
@@ -76,15 +80,19 @@ while i <= frameFinal:
     #czi_path = '/Users/alexandra/Library/CloudStorage/Dropbox/ARO-Files/Device-Segmentation/8-20-2025/Test.czi' # point to new CZI
     czi_path = str(newfpaths[0]) #"/Users/nrondoni/Workspace/spore/sporeHome-main_saveStateOct15/sporesLocal/data/9_30"# point to newfpaths during real time 
     spore_data_output_path = f"{output_dir}spore_data.csv"
-    print(czi_path)
+    #print("czi_path:", czi_path)
 
 
-    focused_image_path: str = str(focused_image_selection(czi_path, output_dir)) # pass back path of focused image for this timepoint
-    if ".tif" not in str(focused_image_path):
-      #focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(focused_image_path).zfill(3)}.tiff' # may work for future naming convention
-      focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(int(focused_image_path) + i).zfill(3)}.tiff'
-      print("focused image path:", focused_image_path)
+    #OLD! focused_image_path: str = str(focused_image_selection(czi_path, output_dir)) # pass back path of focused image for this timepoint
+    #focused_image_path: str = str(focused_image_selection(czi_path, output_dir)) # pass back path of focused image for this timepoint
     
+    #if ".tif" not in str(focused_image_path):
+      #focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(focused_image_path).zfill(3)}.tiff' # may work for future naming convention
+      #focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(int(focused_image_path) + i).zfill(3)}.tiff'
+      #print("focused image path:", focused_image_path)
+    
+    focused_image_path = czi_path 
+
     #preprocessed_image_path: str = preprocess_image(focused_image_path) # will need this eventually!
     preprocessed_image_path = focused_image_path #output_dir + 'focused_t=000_z=028.tiff')
 
@@ -96,11 +104,12 @@ while i <= frameFinal:
 
 # produce mask at first timepoint, than apply to all timepoints
     if int(timepoint) == 1: 
-      print("new print:", preprocessed_image_path, output_dir)
+      #print("new print:", preprocessed_image_path, output_dir)
       # can be slow, uncomment write_mask for real use!
+      print("write_mask is currently commented out! It takes 10 minutes, commented for testing faster. ")
       #mask_path = write_mask(preprocessed_image_path, output_dir)
       mask_path = f"{output_dir}cellpose_mask_t=000.tiff" # this is for testing without writing a new mask
-    print("made it through write_mask")
+    #print("made it through write_mask")
     data_time_t = apply_cellpose_mask(preprocessed_image_path, mask_path) 
     
 
@@ -127,16 +136,15 @@ while i <= frameFinal:
     print("Estimating current germination rate and computing control action...")
     tempDataLocation = r"C:\palmsens\proj\sporeHome-main\sporesLocal\data\generatedData\frame_vs_rate.npy" #"/home/nicho/workspace/sporesLocal/data/generatedData/frame_vs_rate.npy"
     frame_v_rate = np.load(tempDataLocation)
-    frame = frame_v_rate[i, 0] # good gut check to compare this to i. Maybe shouldn't be used? 
-    rate = frame_v_rate[i, 1]
-
+    
+    #rate = currently_germinated_percentage[-1]
     rate = currently_germinated_percentage
 
-
+   
     ## compute control action as a function of this, e.g., suppose germ% is 0.5 currently. Compare to desired traj.
     # Eventually compute PID error between desired trajectory, and actual current rate
     setPoint = desiredTraj(i)
-    print(setPoint, rate)
+    print("setpoint% = ", setPoint, "germ% = ", rate)
     ep = (setPoint - rate)
     ## supply voltage to potentiostat as a function of this error. Hold for 5 minutes? 4.9 minutes? What is safe.
     #                                                              consider: will not poll for new files until done. 
@@ -144,8 +152,9 @@ while i <= frameFinal:
     print("Next voltage", voltOut, "computed, beginning potentiostat communication")
 
     # connect to device, set voltage for duration seconds
-    print("voltageSetter executes here, when connected to windows machine and potentiostat uncomment. ")
+    #print("voltageSetter executes here, when connected to windows machine and potentiostat uncomment. ")
     #voltageSetter(voltOut, duration) #uncomment on windows machine
+    voltageSetterNoDuration(voltOut, is_first_frame) # <- merge to driver
     # rewrite voltage setter to hold for duration seconds, then go to zero until next update comes.
 
     # have OS code execute new file, with appropriate sleep time
@@ -154,5 +163,10 @@ while i <= frameFinal:
 
     # set found back to false; re-initializes while loop checking for new files. 
     found = False
+    is_first_frame = False #<- merge to driver
+    print("------------------------------------------------------------------")
 
-
+    if i==10:
+        print("exit criteria met, disconnecting device")
+        disconnect()
+        exit()

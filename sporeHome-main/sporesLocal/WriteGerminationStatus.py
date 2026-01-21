@@ -55,12 +55,10 @@ def write_germination_status(property_data_csv, t, plot_and_save_phase_trace = F
   
   # write timepoint column of fill with current timepoint
   if time_column not in population_data.columns:
-    print("made it to check 3:55 pm 11/10")
     population_data[time_column] = t
-    print(population_data.columns)
   else:
     population_data[time_column] = population_data[time_column].fillna(t)
-    print("made it to else, 3:55pm 11/10")
+    
 
   for spore_id in population_data[spore_id_column].unique():
     spore_data: pd.DataFrame = population_data[population_data[spore_id_column] == spore_id]

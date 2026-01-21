@@ -1,0 +1,7 @@
+As of 1/20/26, have a tiff driver and czi driver working. The czi driver does does blurry selection. 
+The germination % has been tested for the tiff driver, but we can't do this for czi driver until we have a long enough imaging session
+to actually see germ. 
+
+SO:
+1) merge the changes you made in tiff_driver.py (more recent voltageSetter) to driver.py
+2) set up fancy exit criteria. If you user input stop tiff_driver, you have to manually hold down the palmSens4's power button

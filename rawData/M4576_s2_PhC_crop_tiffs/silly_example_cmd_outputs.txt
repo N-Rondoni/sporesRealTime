@@ -1,0 +1,190 @@
+(.winvenv) PS C:\palmsens\proj\sporeHome-main\sporesLocal> python .\tiff_driver.py
+##################################################################
+Beginning driver for real time control of spore germination rates!
+------------------------------------------------------------------
+Starting time: 2026-01-20 17:14:15 PST
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 0
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0000.tif'] has been found.
+write_mask is currently commented out! It takes 10 minutes, commented for testing faster.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.002 germ% =  0.0
+Next voltage 0.005 computed, beginning potentiostat communication
+connecting to PalmSens4 [1]
+connection established
+cell enabled
+set potential to 0.005V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 1
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0001.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.004 germ% =  0.0
+Next voltage 0.01 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.01V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 2
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0002.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.006 germ% =  0.0
+Next voltage 0.015 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.015V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 3
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0003.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.008 germ% =  0.0
+Next voltage 0.02 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.02V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 4
+No new files.
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0004.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.01 germ% =  0.0
+Next voltage 0.025 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.025V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 5
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0005.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.012 germ% =  0.0
+Next voltage 0.03 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.03V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 6
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0006.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.014 germ% =  0.0
+Next voltage 0.035 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to 0.035V
+current = 6247.5205078125 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 7
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0007.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.016 germ% =  0.3105590062111801
+Next voltage -0.7363975155279502 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to -0.7363975155279502V
+current = -6247.806640625 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 8
+No new files.
+No new files.
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0008.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.018000000000000002 germ% =  0.3105590062111801
+Next voltage -0.7313975155279502 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to -0.7313975155279502V
+current = -6247.806640625 µA
+Holding until next control action
+------------------------------------------------------------------
+Polling for new images every 5 seconds
+current frame number: 9
+No new files.
+No new files.
+New files detected! ['C:\\palmsens\\proj\\rawData\\M4576_s2_PhC_t=0009.tif'] has been found.
+reading in csv data
+calculating germination statuses...
+Estimating current germination rate and computing control action...
+setpoint% =  0.02 germ% =  0.3105590062111801
+Next voltage -0.7263975155279502 computed, beginning potentiostat communication
+connection still established, cell still enabled.
+set potential to -0.7263975155279502V
+current = -6247.806640625 µA
+Holding until next control action
+------------------------------------------------------------------
+exit criteria met, disconnecting device
+cell disabled
+disconnected
