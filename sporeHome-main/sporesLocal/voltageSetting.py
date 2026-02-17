@@ -19,7 +19,7 @@ def voltageSetter(volt, duration):
         exit()
 
     print('connection established')
-
+    record = []
     manager.set_cell(True)
     print('cell enabled')
 
@@ -32,6 +32,7 @@ def voltageSetter(volt, duration):
 
     current = manager.read_current()
     print('current = ' + str(current) + ' µA')
+    #np.save(record, 
 
     print('Holding for', duration, 'seconds')
     
@@ -83,8 +84,10 @@ def voltageSetterNoDuration(volt, is_first_timepoint):
     
     #time.sleep(260) # in seconds, should be longer than update duration.
                     # should get a new command more frequently than the sleep time. 
-    
 
+def voltageSetterOpenLoop():
+    # helper function to supply voltage for open loop experiments, 2/16/26
+    return None 
 
 
 def disconnect():

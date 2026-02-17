@@ -83,12 +83,13 @@ def voltageSetterNoDuration(volt, is_first_timepoint):
     
     #time.sleep(260) # in seconds, should be longer than update duration.
                     # should get a new command more frequently than the sleep time. 
-    
 
+def voltageSetterOpenLoop():
+    # helper function to supply voltage for open loop experiments, 2/16/26
+    return None 
 
 
 def disconnect():
-    global manager
     manager.set_cell(False)
     print('cell disabled')
 
