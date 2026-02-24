@@ -36,13 +36,23 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
   '''
 
   zstack = CziFile(image_stack_path)
-  print(zstack.size)
+  print("dimensions of czi:", zstack.size)
+
   #timepoints, channels, zs, height, width = zstack.size # tosses an error, missing one value somehow?
-  if len(zstack.size) == 4:
+  if len(zstack.size) == 6: # another exception lol
+    print("this .czi contains a len 6, and was preprocessed to be individual timepoints most likely!")
+    _, _, channels, zs, height, width = zstack.size
+    timepoints = 1
+  elif len(zstack.size) == 4:
     channels, zs, height, width = zstack.size
     timepoints = 1
-  else:
+  else # changed structure, was just if else before the additional exception
+    # jank to flatten to first time instant
     timepoints, channels, zs, height, width = zstack.size 
+    # above is the old call, now flatten
+    timepoints = 1 # just take first one to not have a headache and rewrite everything, for now
+    print("This czi contained multiple timepoints, flattening to first to not break later code!") 
+
   #(3, 1, 43, 2048, 2048)
   print(f"selecting focused frames from {image_stack_path}...")
 
@@ -55,6 +65,8 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
   if timepoints == 1:
     print(str(output_directory + output_naming.format(timepoint=t, zindex = z_position))) 
     return str(output_directory + output_naming.format(timepoint=t, zindex = z_position)) 
+  elif timepoints > 1: # if we have more than one timepoint, want to return the z poisition that is focused 
+    return z_position 
 
 
 if __name__ == "__main__":

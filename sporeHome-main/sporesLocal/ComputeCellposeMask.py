@@ -9,6 +9,7 @@ def write_mask(image_t0_path, output_mask_dir, mask_name = "cellpose_mask_t=000.
   model = models.CellposeModel(gpu=core.use_gpu())
   # load image
   img = skio.imread(image_t0_path)
+  #print("image_dim", np.shape(img))
   # run cellpose
   masks, _, _ = model.eval([img], channels=[0, 0])
   # save mask

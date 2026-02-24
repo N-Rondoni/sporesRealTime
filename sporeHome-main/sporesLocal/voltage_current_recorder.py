@@ -519,7 +519,7 @@ def run_voltage_sweep(voltage_list, duration=30, sample_interval=0.01, skip_seco
     
     return build_vi_curve_from_timeseries(voltage_list, skip_seconds)
 
-def run_voltage_pattern_good(pattern, sample_interval=0.1, output_file=None, num_cycles=None, total_duration=None):
+def run_voltage_pattern_noinfo(pattern, sample_interval=0.1, output_file=None, num_cycles=None, total_duration=None):
     """
     Runs a voltage pattern using ChronoAmperometry for accurate timing.
     
@@ -735,7 +735,9 @@ def plot_voltage_pattern(data_file=None, show_voltage=True):
     voltages = []
     currents = []
     
+    #with open(data_file, 'r') as f:
     with open(data_file, 'r') as f:
+    #with open(data_file, 'r', encoding='utf-8', errors='replace') as f:
         reader = csv.DictReader(f)
         for row in reader:
             times.append(float(row['time_s']))
@@ -769,110 +771,6 @@ def plot_voltage_pattern(data_file=None, show_voltage=True):
     plt.show()
     print(f"Plot saved to {plot_file}")
 
-def run_voltage_pattern_bad(pattern, sample_interval=0.1, output_file=None, num_cycles=None, total_duration=None, verbose=True):
-    """
-    Runs a voltage pattern using ChronoAmperometry for accurate timing.
-    
-    Args:
-        pattern: List of (voltage, duration_seconds) tuples
-                 e.g., [(0.5, 300), (-2.0, 30)] for +0.5V 5min, -2V 30s
-        sample_interval: Time between samples (seconds)
-        output_file: Output CSV filename (default: voltage_pattern_{timestamp}.csv)
-        num_cycles: Number of times to repeat the pattern (optional)
-        total_duration: Total experiment duration in seconds (optional)
-                        Pattern repeats until this time is reached
-        verbose: If True, print real-time progress during measurement
-    
-    Returns:
-        Tuple of (times, voltages, currents) lists
-    """
-    ensure_calibration_dir()
-    
-    if output_file is None:
-        timestamp = time.strftime('%Y%m%d_%H%M%S')
-        output_file = os.path.join(CALIBRATION_DIR, f"voltage_pattern_{timestamp}.csv")
-    
-    # Calculate cycle duration
-    cycle_duration = sum(duration for _, duration in pattern)
-    
-    # Determine number of cycles
-    if num_cycles is not None:
-        cycles = num_cycles
-    elif total_duration is not None:
-        cycles = int(total_duration // cycle_duration)
-        if cycles == 0:
-            cycles = 1
-        print(f"Pattern cycle: {cycle_duration}s, total duration: {total_duration}s -> {cycles} complete cycles")
-    else:
-        cycles = 1
-    
-    total_expected = cycles * cycle_duration
-    print(f"Running {cycles} cycle(s), total time: {total_expected}s ({total_expected/60:.1f} min)")
-    print(f"Pattern: {pattern}")
-    print()
-    
-    all_times = []
-    all_voltages = []
-    all_currents = []
-    global_time_offset = 0
-    
-    # Progress callback for real-time feedback
-    last_print_time = [0]  # Use list to allow modification in nested function
-    
-    def progress_callback(data):
-        if not verbose:
-            return
-        # Print every 10 seconds
-        if data.x and len(data.x) > 0:
-            current_time = data.x[-1]
-            if current_time - last_print_time[0] >= 10:
-                last_print_time[0] = current_time
-                latest_current = data.y[-1] if data.y else 0
-                elapsed_total = global_time_offset + current_time
-                print(f"    t={elapsed_total:.0f}s ({elapsed_total/60:.1f}min) | I={latest_current:.4f} µA")
-    
-    for cycle in range(cycles):
-        print(f"=== Cycle {cycle + 1}/{cycles} ===")
-        
-        for volt, duration in pattern:
-            print(f"  Applying {volt}V for {duration}s ({duration/60:.1f} min)...")
-            last_print_time[0] = 0  # Reset for each step
-            
-            method = ps.ChronoAmperometry(
-                potential=volt,
-                interval_time=sample_interval,
-                run_time=duration,
-            )
-            
-            measurement = ps.measure(method, callback=progress_callback if verbose else None)
-            df = measurement.dataset.to_dataframe()
-            
-            # Extract columns
-            time_col = [c for c in df.columns if 'time' in c.lower() or c == 't'][0]
-            current_col = [c for c in df.columns if 'current' in c.lower() or c == 'i'][0]
-            
-            times = df[time_col].tolist()
-            currents = df[current_col].tolist()
-            
-            # Add to global lists with time offset
-            for t, i in zip(times, currents):
-                all_times.append(t + global_time_offset)
-                all_voltages.append(volt)
-                all_currents.append(i)
-            
-            global_time_offset += duration
-            print(f"    Completed. Total elapsed: {global_time_offset}s ({global_time_offset/60:.1f} min)")
-    
-    # Save to CSV
-    with open(output_file, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['time_s', 'voltage_V', 'current_uA'])
-        for t, v, i in zip(all_times, all_voltages, all_currents):
-            writer.writerow([t, v, i])
-    
-    print(f"\nExperiment complete. Recorded {len(all_times)} samples -> {output_file}")
-    return all_times, all_voltages, all_currents
-
 
 # Example usage
 if __name__ == "__main__":
@@ -901,13 +799,13 @@ if __name__ == "__main__":
     (0.5, 30),      # 0.5V for 30s reset
     ]
     
-    #pattern = [
+    #testPattern = [
     #(0.5, 30),    # +0.5V for 5 min
     #(-0.5, 10),    # -2V for 30s reset
     #]
    
     # Option 1: Run for specific number of cycles
-    run_voltage_pattern(pattern, sample_interval=0.1, num_cycles=5, verbose=True)
+    #run_voltage_pattern(pattern, sample_interval=0.1, num_cycles=5, verbose=True)
 
     # Option 2: Run for total duration (fits as many complete cycles as possible)
     #run_voltage_pattern(pattern, sample_interval=0.1, total_duration=30*60)

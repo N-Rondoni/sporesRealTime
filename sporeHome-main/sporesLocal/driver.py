@@ -19,6 +19,7 @@ from Preprocessing import preprocess_image
 from WriteGerminationStatus import write_germination_status
 from CalculatePercentageGerminated import calculate_percentage_germinated
 import pandas as pd
+import sys
 # NOTE TO SELF: this is good for .czi file types, with blurry selection, but we haven't been able to test germ% because we don't have 
 #               appropriate files to test on. Moving to tiff_driver.py as of 1/20/26. Will likely use this driver eventually, however. 
 
@@ -31,7 +32,7 @@ folder = r"C:\palmsens\proj\rawData"
 # how many seconds to check for new files
 pollTime = 5
 # final frame number. Multiples of 5 minutes. May want to iterate indefinitely.
-frameFinal = 6
+frameFinal = 20
 # how long voltage, decided by controller, will be supplied for. Should be less than duration of a frame. 
 
 duration = 270 
@@ -69,6 +70,7 @@ while i <= frameFinal:
     # select least blurry file, newfpaths is a list of strings, which are fnames. Pass these into blurry decider. 
     #output_dir =  r"C:\palmsens\proj\genData\\"
     output_dir =  r"C:/palmsens/proj/genData/"
+    output_dir =  r"C:/palmsens/proj/genData/run_2_18/"
 
     #print(output_dir)
 
@@ -98,8 +100,8 @@ while i <= frameFinal:
     if int(timepoint) == 1: 
       print("new print:", preprocessed_image_path, output_dir)
       # can be slow, uncomment write_mask for real use!
-      #mask_path = write_mask(preprocessed_image_path, output_dir)
-      mask_path = f"{output_dir}cellpose_mask_t=000.tiff" # this is for testing without writing a new mask
+      mask_path = write_mask(preprocessed_image_path, output_dir)
+      #mask_path = f"{output_dir}cellpose_mask_t=000.tiff" # this is for testing without writing a new mask
     print("made it through write_mask")
     data_time_t = apply_cellpose_mask(preprocessed_image_path, mask_path) 
     
@@ -131,7 +133,7 @@ while i <= frameFinal:
     rate = frame_v_rate[i, 1]
 
     rate = currently_germinated_percentage
-
+    print(currently_germinated_percentage)
 
     ## compute control action as a function of this, e.g., suppose germ% is 0.5 currently. Compare to desired traj.
     # Eventually compute PID error between desired trajectory, and actual current rate
@@ -140,7 +142,7 @@ while i <= frameFinal:
     ep = (setPoint - rate)
     ## supply voltage to potentiostat as a function of this error. Hold for 5 minutes? 4.9 minutes? What is safe.
     #                                                              consider: will not poll for new files until done. 
-    voltOut = ep*vMax
+    voltOut = ep
     print("Next voltage", voltOut, "computed, beginning potentiostat communication")
 
     # connect to device, set voltage for duration seconds

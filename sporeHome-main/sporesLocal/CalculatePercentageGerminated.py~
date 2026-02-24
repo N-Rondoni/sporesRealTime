@@ -20,7 +20,7 @@ def calculate_percentage_germinated(data: pd.DataFrame) -> float:
         data_timepoint = data[data['timepoint'] == timepoint]
         germinated_spores = data_timepoint[data_timepoint['germination_status'] == 1]['label'].nunique()
         percentage_germinated_t = (germinated_spores / total_spores) * 100 if total_spores > 0 else 0
-        print(percentage_germinated_t)
+        print("AAAAAAA", percentage_germinated_t)
         #percentage_germinated_array[int(timepoint)] = percentage_germinated_t
 
     #return percentage_germinated_array

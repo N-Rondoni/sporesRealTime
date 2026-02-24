@@ -1,0 +1,324 @@
+"""
+czi_timestamp_reader.py
+
+Helper to load .czi metadata and print the acquisition timestamp (in PST)
+for each z-stack (timepoint). Works with:
+  - Individual per-timepoint .czi files (from ZEN AutoSave split)
+  - A single combined .czi containing a T-dimension
+
+Key metadata fields used (ZEN Blue CZI schema):
+  - Information|Document|CreationDate       — experiment start (with timezone)
+  - Information|Image|T|StartTime           — same in UTC
+  - Information|TimelineTrack|TimelineElement|Time #N  — per-timepoint timestamps
+  - Information|Image|T|Interval|Increment  — interval in seconds
+
+Dependencies:
+    pip install aicspylibczi lxml
+
+Usage:
+    # Single file
+    python czi_timestamp_reader.py path/to/stack.czi
+
+    # Directory of per-timepoint .czi files
+    python czi_timestamp_reader.py path/to/folder/
+
+    # Or import as a helper
+    from czi_timestamp_reader import print_zstack_timestamps
+    print_zstack_timestamps("path/to/file_or_folder")
+"""
+
+import os
+import sys
+import glob
+from lxml import etree
+from datetime import datetime, timedelta, timezone
+
+# PST = UTC - 8 hours
+PST = timezone(timedelta(hours=-8))
+
+
+def _get_metadata_xml(czi_path: str) -> etree._Element:
+    """Extract the XML metadata root from a .czi file."""
+    try:
+        from aicspylibczi import CziFile
+        czi = CziFile(czi_path)
+        xml_str = czi.meta
+        return etree.fromstring(xml_str.encode() if isinstance(xml_str, str) else xml_str)
+    except ImportError:
+        pass
+
+    try:
+        import czifile
+        with czifile.CziFile(czi_path) as czi:
+            xml_str = czi.metadata()
+            return etree.fromstring(xml_str.encode() if isinstance(xml_str, str) else xml_str)
+    except ImportError:
+        pass
+
+    raise ImportError(
+        "Install either aicspylibczi or czifile:\n"
+        "  pip install aicspylibczi lxml\n"
+        "  pip install czifile lxml"
+    )
+
+
+def _parse_utc_timestamp(ts_str: str) -> datetime | None:
+    """Parse a CZI timestamp string into a UTC-aware datetime."""
+    if not ts_str:
+        return None
+    try:
+        cleaned = ts_str.strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(cleaned)
+        # If naive, assume UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        return None
+
+
+def _to_pst(dt: datetime) -> datetime:
+    """Convert a datetime to PST."""
+    return dt.astimezone(PST)
+
+
+def get_creation_date(root: etree._Element) -> str | None:
+    """
+    Pull Information|Document|CreationDate from CZI metadata.
+    This is the experiment start time (typically includes timezone).
+    """
+    paths_to_try = [
+        ".//Information/Document/CreationDate",
+        ".//Document/CreationDate",
+        ".//CreationDate",
+        ".//AcquisitionDateAndTime",
+        ".//Information/Image/AcquisitionDateAndTime",
+    ]
+    for xpath in paths_to_try:
+        elem = root.find(xpath)
+        if elem is not None and elem.text:
+            return elem.text.strip()
+    return None
+
+
+def get_timepoint_timestamps(root: etree._Element) -> list[str]:
+    """
+    Extract per-timepoint timestamps from:
+      Information|TimelineTrack|TimelineElement|Time #N
+    Returns list of raw timestamp strings, one per timepoint.
+    """
+    timestamps = []
+
+    # Method 1: TimelineTrack elements (ZEN Blue style)
+    for elem in root.iter():
+        tag = elem.tag if isinstance(elem.tag, str) else ""
+        if "TimelineElement" in tag or tag == "TimelineElement":
+            time_elem = elem.find("Time")
+            if time_elem is not None and time_elem.text:
+                timestamps.append(time_elem.text.strip())
+
+    if timestamps:
+        return timestamps
+
+    # Method 2: Look for TimeStamps container
+    ts_container = root.find(".//TimeStamps")
+    if ts_container is not None:
+        for ts in ts_container.findall("TimeStamp"):
+            if ts.text:
+                timestamps.append(ts.text.strip())
+
+    return timestamps
+
+
+def get_timepoint_offsets(root: etree._Element) -> list[float]:
+    """
+    Fallback: reconstruct per-timepoint offsets from interval metadata
+    when explicit timestamps aren't available.
+    """
+    increment_elem = root.find(".//Dimensions/T/Positions/Interval/Increment")
+    start_elem = root.find(".//Dimensions/T/Positions/Interval/Start")
+    size_t_elem = root.find(".//*SizeT")
+
+    if increment_elem is not None and size_t_elem is not None:
+        increment = float(increment_elem.text)
+        start = float(start_elem.text) if start_elem is not None else 0.0
+        n_t = int(size_t_elem.text)
+        return [start + i * increment for i in range(n_t)]
+
+    return []
+
+
+def get_interval_seconds(root: etree._Element) -> float | None:
+    """
+    Get Information|Image|T|Interval|Increment (interval in seconds).
+    Also checks TimeSeriesSetup|Interval|TimeSpan|Value.
+    """
+    for xpath in [
+        ".//Dimensions/T/Positions/Interval/Increment",
+        ".//Information/Image/T/Interval/Increment",
+    ]:
+        elem = root.find(xpath)
+        if elem is not None and elem.text:
+            return float(elem.text)
+
+    for elem in root.iter():
+        if "TimeSpan" in (elem.tag or "") or "Interval" in (elem.tag or ""):
+            val = elem.find("Value")
+            if val is not None and val.text:
+                try:
+                    return float(val.text)
+                except ValueError:
+                    pass
+    return None
+
+
+def get_zstack_info(root: etree._Element) -> dict:
+    """Extract z-stack parameters from metadata."""
+    info = {}
+
+    size_z = root.find(".//*SizeZ")
+    if size_z is not None and size_z.text:
+        info["num_z_slices"] = int(size_z.text)
+
+    z_interval = root.find(".//Dimensions/Z/Positions/Interval/Increment")
+    if z_interval is not None and z_interval.text:
+        info["z_step_um"] = float(z_interval.text) * 1e6  # m -> µm
+
+    size_t = root.find(".//*SizeT")
+    if size_t is not None and size_t.text:
+        info["num_timepoints"] = int(size_t.text)
+
+    return info
+
+
+def print_single_file_timestamps(czi_path: str, file_index: int | None = None) -> dict:
+    """
+    Print timestamp info for a single .czi file.
+    All times converted from UTC to PST (UTC − 8hrs).
+    """
+    root = _get_metadata_xml(czi_path)
+    creation_date_str = get_creation_date(root)
+    zinfo = get_zstack_info(root)
+    tp_timestamps = get_timepoint_timestamps(root)
+    interval = get_interval_seconds(root)
+
+    basename = os.path.basename(czi_path)
+    prefix = f"[{file_index}] " if file_index is not None else ""
+
+    print(f"{prefix}{basename}")
+
+    # Parse and display CreationDate in PST
+    creation_dt = _parse_utc_timestamp(creation_date_str) if creation_date_str else None
+    if creation_dt:
+        pst_dt = _to_pst(creation_dt)
+        print(f"  CreationDate (PST): {pst_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+    else:
+        print(f"  CreationDate      : not found")
+
+    # Z-stack info
+    num_z = zinfo.get("num_z_slices", "?")
+    z_step = zinfo.get("z_step_um")
+    print(f"  Z-slices          : {num_z}" + (f"  (step: {z_step:.2f} µm)" if z_step else ""))
+
+    if interval is not None:
+        print(f"  Interval          : {interval:.0f}s ({interval/60:.1f} min)")
+
+    # Per-timepoint table (UTC → PST)
+    num_t = zinfo.get("num_timepoints", 1)
+    if num_t and num_t > 1:
+        print(f"  Timepoints        : {num_t}")
+        print()
+        print(f"  {'Timepoint':<12} {'UTC':<22} {'PST':<22}")
+        print(f"  {'-'*12} {'-'*22} {'-'*22}")
+
+        if tp_timestamps:
+            for t_idx, ts_str in enumerate(tp_timestamps):
+                dt = _parse_utc_timestamp(ts_str)
+                if dt:
+                    pst_dt = _to_pst(dt)
+                    print(f"  T={t_idx:<9d} {dt.strftime('%H:%M:%S'):<22} "
+                          f"{pst_dt.strftime('%I:%M:%S %p'):<22}")
+                else:
+                    print(f"  T={t_idx:<9d} (could not parse)")
+        elif creation_dt:
+            # Fallback: reconstruct from CreationDate + interval offsets
+            offsets = get_timepoint_offsets(root)
+            if offsets:
+                for t_idx, offset_s in enumerate(offsets):
+                    dt_utc = creation_dt.astimezone(timezone.utc) + timedelta(seconds=offset_s)
+                    dt_pst = _to_pst(dt_utc)
+                    print(f"  T={t_idx:<9d} {dt_utc.strftime('%H:%M:%S'):<22} "
+                          f"{dt_pst.strftime('%I:%M:%S %p'):<22}")
+
+    print()
+    return {
+        "path": czi_path,
+        "creation_date": creation_date_str,
+        "creation_dt_pst": _to_pst(creation_dt) if creation_dt else None,
+        "z_info": zinfo,
+        "interval_s": interval,
+        "timepoint_timestamps": tp_timestamps,
+    }
+
+
+def print_zstack_timestamps(path: str):
+    """
+    Main entry point. Pass a single .czi file or a directory of .czi files.
+    Prints acquisition timestamps for each z-stack.
+
+    All times converted: UTC → PST (subtract 8 hours).
+    """
+    if os.path.isfile(path):
+        print("=" * 60)
+        print("CZI Timestamp Reader  (times shown in PST = UTC − 8)")
+        print("=" * 60)
+        print()
+        print_single_file_timestamps(path)
+
+    elif os.path.isdir(path):
+        czi_files = sorted(glob.glob(os.path.join(path, "*.czi")))
+        if not czi_files:
+            print(f"No .czi files found in {path}")
+            return
+
+        print("=" * 60)
+        print(f"CZI Timestamp Reader — {len(czi_files)} files")
+        print(f"  (times shown in PST = UTC − 8)")
+        print("=" * 60)
+        print()
+
+        results = []
+        for i, f in enumerate(czi_files):
+            result = print_single_file_timestamps(f, file_index=i)
+            results.append(result)
+
+        # Timeline summary
+        times_pst = []
+        for r in results:
+            if r["creation_dt_pst"]:
+                times_pst.append((os.path.basename(r["path"]), r["creation_dt_pst"]))
+
+        if len(times_pst) > 1:
+            print("-" * 60)
+            print("TIMELINE SUMMARY (PST)")
+            print("-" * 60)
+            print()
+            print(f"  {'File':<40} {'PST':<22} {'Δt':<12}")
+            print(f"  {'-'*40} {'-'*22} {'-'*12}")
+            t0 = times_pst[0][1]
+            for name, t in times_pst:
+                delta = (t - t0).total_seconds()
+                delta_str = f"{delta:.0f}s ({delta/60:.1f}m)" if delta > 0 else "—"
+                print(f"  {name:<40} "
+                      f"{t.strftime('%I:%M:%S %p'):<22} "
+                      f"{delta_str}")
+            print()
+    else:
+        print(f"Path not found: {path}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+    print_zstack_timestamps(sys.argv[1])
