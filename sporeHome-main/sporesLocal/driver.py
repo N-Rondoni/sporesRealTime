@@ -81,7 +81,7 @@ while i <= frameFinal:
     print(czi_path)
 
 
-    focused_image_path: str = str(focused_image_selection(czi_path, output_dir)) # pass back path of focused image for this timepoint
+    focused_image_path: str = str(focused_image_selection(czi_path, output_dir, timepoint_index=i)) # pass back path of focused image for this timepoint
     if ".tif" not in str(focused_image_path):
       #focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(focused_image_path).zfill(3)}.tiff' # may work for future naming convention
       focused_image_path = f'{output_dir}focused_t={str(i).zfill(3)}_z={str(int(focused_image_path) + i).zfill(3)}.tiff'

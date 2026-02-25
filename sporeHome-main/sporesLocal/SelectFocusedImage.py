@@ -25,7 +25,7 @@ def best_brenner_score(image_arrays: list) -> np.array:
   best_image = image_arrays[best_brenner_score_index]
   return np.squeeze(best_image), best_brenner_score_index
 
-def focused_image_selection(image_stack_path: str, output_directory: str, output_naming = 'focused_t={timepoint:03d}_z={zindex:03d}.tiff') -> None:
+def focused_image_selection(image_stack_path: str, output_directory: str, timepoint_index: int = 0, output_naming = 'focused_t={timepoint:03d}_z={zindex:03d}.tiff') -> None:
   '''
   takes in a czi path and writes the most focused image at each timepoint
   
@@ -59,12 +59,12 @@ def focused_image_selection(image_stack_path: str, output_directory: str, output
   for t in range(timepoints):
       zstack_arrays_time_t: list = [zstack.read_image(C=0, Z=z, T=t)[0] for z in range(zs)]
       best_focus_image_time_t, z_position = best_brenner_score(zstack_arrays_time_t)
-      tifffile.imwrite(output_directory + output_naming.format(timepoint=t, zindex = z_position), best_focus_image_time_t.astype(np.uint16))
+      tifffile.imwrite(output_directory + output_naming.format(timepoint=timepoint_index, zindex = z_position), best_focus_image_time_t.astype(np.uint16))
  
   print(f"writing focused images to {output_directory}...")
   if timepoints == 1:
-    print(str(output_directory + output_naming.format(timepoint=t, zindex = z_position))) 
-    return str(output_directory + output_naming.format(timepoint=t, zindex = z_position)) 
+    print(str(output_directory + output_naming.format(timepoint=timepoint_index, zindex = z_position))) 
+    return str(output_directory + output_naming.format(timepoint=timepoint_index, zindex = z_position)) 
   elif timepoints > 1: # if we have more than one timepoint, want to return the z poisition that is focused 
     return z_position 
 

@@ -1,0 +1,21 @@
+mport matplotlib.pyplot as plt
+
+def plot_germination():
+        t = [0, 8, 28, 38, 42]
+            germ = [0, 0, 98.96, 100, 100]
+
+                fig, ax = plt.subplots(figsize=(7, 5))
+                    ax.plot(t, germ, 'o-', color='forestgreen', linewidth=2, markersize=8)
+
+                        ax.set_xlabel('Time (minutes)', fontsize=13)
+                            ax.set_ylabel('Germination (%)', fontsize=13)
+                                ax.set_title('Germination Percentage Over Time', fontsize=14)
+                                    ax.set_ylim(-5, 110)
+                                        ax.set_xlim(-2, 45)
+                                            ax.tick_params(labelsize=11)
+                                                ax.grid(True, linestyle='--', alpha=0.5)
+
+                                                    plt.tight_layout()
+                                                        plt.show()
+
+                                                        plot_germination()

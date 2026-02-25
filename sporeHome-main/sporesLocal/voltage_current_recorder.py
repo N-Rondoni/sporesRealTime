@@ -351,6 +351,58 @@ def parse_pstrace_csv(filepath, skip_seconds=6.0):
     
     return times, currents, avg, std
 
+def plot_pstrace_csv(filename, smooth_window=None):
+    """
+    Plots a PSTrace CSV file.
+    
+    Args:
+        filename: Name of PSTrace CSV file (in calibration_curves folder)
+        smooth_window: If set, apply moving average with this window size
+    """
+    filepath = os.path.join(CALIBRATION_DIR, filename)
+    
+    if not os.path.isfile(filepath):
+        print(f"File not found: {filepath}")
+        return
+    
+    times, currents, avg, std = parse_pstrace_csv(filepath)
+    
+    # Convert to minutes
+    times_min = [t / 60 for t in times]
+    
+    # Optional smoothing
+    if smooth_window and smooth_window > 1:
+        smoothed = []
+        for i in range(len(currents)):
+            start = max(0, i - smooth_window // 2)
+            end = min(len(currents), i + smooth_window // 2 + 1)
+            smoothed.append(sum(currents[start:end]) / (end - start))
+        currents_plot = smoothed
+        smooth_label = f' (smoothed, window={smooth_window})'
+    else:
+        currents_plot = currents
+        smooth_label = ''
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(times_min, currents_plot, 'b-', linewidth=0.8)
+    plt.xlabel('Time (min)', fontsize=12)
+    plt.ylabel('Current (µA)', fontsize=12)
+    plt.title(f'PSTrace: {filename}{smooth_label}', fontsize=14)
+    plt.grid(True, alpha=0.3)
+    
+    # Add stats annotation
+    stats_text = f'Mean: {avg:.6f} µA\nStd: {std:.6f} µA'
+    plt.annotate(stats_text, xy=(0.98, 0.98), xycoords='axes fraction',
+                 ha='right', va='top', fontsize=10,
+                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    plt.tight_layout()
+    
+    plot_file = os.path.join(CALIBRATION_DIR, filename.replace('.csv', '.png'))
+    plt.savefig(plot_file, dpi=150)
+    plt.show()
+    print(f"Plot saved to {plot_file}")
+
 
 def compare_implementations(custom_file, pstrace_file, skip_seconds=6.0, output_file=None):
     """
@@ -724,7 +776,8 @@ def plot_voltage_pattern(data_file=None, show_voltage=True):
     """
     if data_file is None:
         # Find most recent pattern file
-        pattern_files = [f for f in os.listdir(CALIBRATION_DIR) if f.startswith("voltage_pattern_")]
+        # pattern_files = [f for f in os.listdir(CALIBRATION_DIR) if f.startswith("voltage_pattern_")]
+        pattern_files = [f for f in os.listdir(CALIBRATION_DIR) if f.startswith("voltage_pattern_") and f.endswith(".csv")]
         if not pattern_files:
             print("No voltage pattern files found")
             return
@@ -810,5 +863,6 @@ if __name__ == "__main__":
     # Option 2: Run for total duration (fits as many complete cycles as possible)
     #run_voltage_pattern(pattern, sample_interval=0.1, total_duration=30*60)
     plot_voltage_pattern()
+    plot_pstrace_csv("PStrace_range_minus_0_5.csv")
 
     plt.show()
